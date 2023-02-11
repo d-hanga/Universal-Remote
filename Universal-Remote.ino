@@ -3,13 +3,11 @@
 #include <IRremote.hpp>
 #define TVONOFF 0xF708FB04
 #define BOXONOFF 0xBA45FF00
-#define IRTRANSMITTER  3
-#define IRRECEIVER  11
-#define ASIIGNBUTTON_PIN 13
-#define SENDBUTTON_PIN 12
-#define RED_RGB 14
-#define GREEN_RGB 15
-#define BLUE_RGB 16
+#define IRTRANSMITTER 5
+#define IRRECEIVER 6
+#define RED_RGB 9
+#define GREEN_RGB 10
+#define BLUE_RGB 11
 
 enum {
   K0 = 0,
@@ -33,8 +31,8 @@ enum {
 
 uint32_t signals[16];
 
-const byte rows = 4; //four rows
-const byte cols = 4; //four columns
+const byte rows = 4;
+const byte cols = 4;
 bool assignmode = false;
 uint32_t signal = 0;
 char keys[rows][cols] = {
@@ -43,8 +41,8 @@ char keys[rows][cols] = {
   {'7', '8', '9', 'C'},
   {'*', '0', '#', 'D'}
 };
-byte rowPins[rows] = {10, 9, 8, 6};
-byte colPins[cols] = {5, 4, 2, 1};
+byte rowPins[rows] = {12, 13, 14, 15};
+byte colPins[cols] = {16, 17, 18, 19};
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, rows, cols);
 char lastkeypressed;
 
@@ -53,21 +51,19 @@ void setup() {
   pinMode(RED_RGB, OUTPUT);
   pinMode(GREEN_RGB, OUTPUT);
   pinMode(BLUE_RGB, OUTPUT);
-  pinMode(ASIIGNBUTTON_PIN, INPUT);
-  pinMode(SENDBUTTON_PIN, INPUT);
   IrReceiver.begin(IRRECEIVER);
   IrSender.begin(IRTRANSMITTER);
   delay(100);
   Serial.println("Script Started!");
   digitalWrite(GREEN_RGB, HIGH);
-  digitalWrite(RED_RGB, LOW);
   Serial.println("SEND");
 }
 
 void loop() {
   char rn = keypad.getKey();
-  if (rn) {
+  if (rn && rn != '#' && rn != '*') {
     if (assignmode) {
+      digitalWrite(BLUE_RGB, HIGH);
       Serial.print("ASSIGN-Button: ");
     } else {
       Serial.print("SEND-Button: ");
@@ -75,22 +71,24 @@ void loop() {
     Serial.println(rn);
     lastkeypressed = rn;
   }
-  if (rn == '*') {
-    assignmode = true;
+  if (rn == '#') {
     digitalWrite(RED_RGB, HIGH);
+    digitalWrite(BLUE_RGB, LOW);
     digitalWrite(GREEN_RGB, LOW);
+    assignmode = true;
     Serial.println("ASSIGN");
     delay(500);
   }
-  if (rn == '#') {    
+  if (rn == '*') {    
     assignmode = false;
     digitalWrite(GREEN_RGB, HIGH);
+    digitalWrite(BLUE_RGB, LOW);
     digitalWrite(RED_RGB, LOW);
     Serial.println("SEND");
     delay(500);
   }
-  if (lastkeypressed) {
-    if (assignmode == false) {
+  if (lastkeypressed && lastkeypressed != '#' && lastkeypressed != '*') {
+    if (!assignmode) {
       Serial.print("SEND-Signal: ");
       switch (lastkeypressed) {
         case '0':
@@ -150,61 +148,63 @@ void loop() {
       }
       delay(100);
       lastkeypressed = 0;
-    } else {
-      if (IrReceiver.decode()) {
-        signal = IrReceiver.decodedIRData.decodedRawData;
-        switch (lastkeypressed) {
-          case '0':
-            signals[K0] = signal;
-            break;
-          case '1':
-            signals[K1] = signal;
-            break;
-          case '2':
-            signals[K2] = signal;
-            break;
-          case '3':
-            signals[K3] = signal;
-            break;
-          case '4':
-            signals[K4] = signal;
-            break;
-          case '5':
-            signals[K5] = signal;
-            break;
-          case '6':
-            signals[K6] = signal;
-            break;
-          case '7':
-            signals[K7] = signal;
-            break;
-          case '8':
-            signals[K8] = signal;
-            break;
-          case '9':
-            signals[K9] = signal;
-            break;
-          case 'A':
-            signals[KA] = signal;
-            break;
-          case 'B':
-            signals[KB] = signal;
-            break;
-          case 'C':
-            signals[KC] = signal;
-            break;
-          case 'D':
-            signals[KD] = signal;
-            break;
-          default:
-            break;
-        }
-        delay(100);
-        Serial.print("ASSIGN-Signal: ");
-        Serial.println(signal, HEX);
-        lastkeypressed = 0;
-        IrReceiver.resume();
+    } else if (IrReceiver.decode() && IrReceiver.decodedIRData.decodedRawData != 0) {
+      signal = IrReceiver.decodedIRData.decodedRawData; 
+      Serial.println("Inside");
+      switch (lastkeypressed) {
+        case '0':
+          signals[K0] = signal;
+          break;
+        case '1':
+          signals[K1] = signal;
+          break;
+        case '2':
+          signals[K2] = signal;
+          break;
+        case '3':
+          signals[K3] = signal;
+          break;
+        case '4':
+          signals[K4] = signal;
+          break;
+        case '5':
+          signals[K5] = signal;
+          break;
+        case '6':
+          signals[K6] = signal;
+          break;
+        case '7':
+          signals[K7] = signal;
+          break;
+        case '8':
+          signals[K8] = signal;
+          break;
+        case '9':
+          signals[K9] = signal;
+          break;
+        case 'A':
+          signals[KA] = signal;
+          break;
+        case 'B':
+          signals[KB] = signal;
+          break;
+        case 'C':
+          signals[KC] = signal;
+          break;
+        case 'D':
+          signals[KD] = signal;
+          break;
+        default:
+          break;
       }
+      digitalWrite(RED_RGB, HIGH);
+      digitalWrite(BLUE_RGB, LOW);
+      digitalWrite(GREEN_RGB, LOW);
+      delay(100);
+      Serial.print("ASSIGN-Signal: ");
+      Serial.println(signal, HEX);
+      lastkeypressed = 0;
+      IrReceiver.resume();
     }
   }
 }
